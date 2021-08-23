@@ -17,9 +17,9 @@ a "TABLE" function in a SQL query via PIPE ROW.
 
 - [Installation](#installation)
 - [Use Cases](#use-cases)
+    - [Read From Table Function](#read-from-table-function)
     - [Create a CSV FIle](#create-a-csv-file)
     - [Retrieve a CLOB](#retrieve-a-clob)
-    - [Read From Table Function](#read-from-table-function)
     - [Process Results in a Loop](#process-results-in-a-loop)
 - [Test Directory](#test-directory)
 - [Manual Page](#manual-page)
@@ -46,6 +46,33 @@ make that a TABLE of CLOB if you have a need for rows longer than 4000 chars in 
 from SQL. If you are dealing exclusively in PL/SQL, the maximum row length is already 32767.
 
 # Use Cases
+
+## Read from TABLE Function
+
+You can use a simple SQL SELECT to read CSV strings as records from the TABLE function *get_rows*, perhaps
+spooling them to a text file with sqlplus. Given how frequently I've seen a cobbled together
+SELECT concatenting multiple fields and separators into one value, this may
+be the most common use case.
+
+The following is *test1.sql* from the *test* directory.
+
+```sql
+    set echo off
+    set linesize 200
+    set pagesize 0
+    set heading off
+    set trimspool on
+    set feedback off
+    spool test1.csv
+    SELECT a.column_value FROM TABLE(
+            app_csv_udt.get_rows(CURSOR(SELECT * FROM hr.departments ORDER BY department_name)
+                                ,p_separator=> '|'
+                                ,p_do_header => 'Y'
+                                )
+        ) a
+    ;
+    spool off
+```
 
 ## Create a CSV File
 
@@ -89,7 +116,7 @@ is a contrived example of writing the file, then using TO_CLOB(BFILENAME()) to r
 
 ## Retrieve a CLOB
 
-The CSV strings can be concatenated into a CLOB with CR/LF between each row. The resulting CLOB can be
+The CSV strings can be concatenated into a CLOB with CR/LF after each row. The resulting CLOB can be
 attached to an e-mail, written to a file or inserted/updated to a CLOB column in a table. Perhaps
 added to a zip archive. There are many possibilites once you have the CSV content in a CLOB.
 See *test/test2.sql* for an example function you can call in a SQL select.
@@ -108,29 +135,6 @@ See *test/test2.sql* for an example function you can call in a SQL select.
         l_clob := l_csv.get_clob(p_do_header => 'Y', p_separator => '|');
         ...
     END;
-```
-
-## Read from TABLE Function
-
-You can use SQL directly to read CSV strings as records from the TABLE function *get_rows*, perhaps
-spooling them to a text file with sqlplus. The following is *test1.sql* from the *test* directory.
-
-```sql
-    set echo off
-    set linesize 200
-    set pagesize 0
-    set heading off
-    set trimspool on
-    set feedback off
-    spool test1.csv
-    SELECT a.column_value FROM TABLE(
-            app_csv_udt.get_rows(CURSOR(SELECT * FROM hr.departments ORDER BY department_name)
-                                ,p_separator=> '|'
-                                ,p_do_header => 'Y'
-                                )
-        ) a
-    ;
-    spool off
 ```
 
 ## Process Results in a Loop
@@ -194,7 +198,11 @@ Creates the object using the provided cursor. Prepares for reading and convertin
     ) RETURN SELF AS RESULT
 ```
 
+*p_separator* is intended to be a single character. The attribute is 2 characters wide if you want to try it that way.
+
 *p_num_format* and *p_date_format* are passed to *TO_CHAR* for number and date/time formats respectively.
+
+*p_bulk_count* is the number of records DBMS_SQL will read in each fetch.
 
 When *p_quote_all_strings* starts with a 'Y' or 'y', then all character values are enclosed in double quotes,
 not just the ones that contain a separator or newline.
@@ -215,9 +223,9 @@ The appropriate use case is to call it from SQL using the construct:
                                   )
     ;
 ```
-
-All of the arguments for the constructor are present along with the flag for whether or not to
-put the column header names in the first row.
+The arguments are the same as the constructor plus *p_do_header*.
+If *p_do_header* starts with 'Y' or 'y', then the first record returned will be the column headers
+in a CSV string.
 
 ```sql
    STATIC FUNCTION get_rows(
@@ -231,12 +239,13 @@ put the column header names in the first row.
     ) RETURN arr_varchar2_udt PIPELINED
 ```
 
-Although you can call this from PL/SQL and iterate through the loop, that will instantiate the entire
+Although you can call this from PL/SQL and iterate through the returned collection, that will instantiate the entire
 result set array before returning control to your program. The *PIPE ROW* optimization is strictly for
 the SQL engine, not PL/SQL. If you are thinking about using it that
 way, you might be better off with the technique shown in the use 
 case [Process Results in a Loop](#process-results-in-a-loop). That said, it is not uncommon to see functions
-like this called in PL/SQL in an implicit FOR loop.
+like this called in PL/SQL in an implicit FOR loop. Although it is more efficient to avoid
+going back out to the SQL engine, the difference is likely lost in the noise.
 
 ```sql
     FOR r IN (SELECT column_value FROM TABLE(app_csv_udt.get_rows(
@@ -250,7 +259,7 @@ like this called in PL/SQL in an implicit FOR loop.
 
 ## get_clob
 
-Returns a CLOB containing all of the rows separated by CR/LF. If the cursor returns no rows, the
+Returns a CLOB containing all of the rows delimited by CR/LF. If the cursor returns no rows, the
 returning CLOB is NULL, even if a header row is called for.
 
 ```sql
@@ -259,8 +268,12 @@ returning CLOB is NULL, even if a header row is called for.
         ,p_do_header            VARCHAR2 := 'N'
     ) RETURN CLOB
 ```
-After executing this method, you cannot restart the cursor. The only practical method remaining for 
-the ojbect is *get_row_count*.
+If *p_do_header* starts with 'Y' or 'y', then the first line in the CLOB will be the column headers
+in CSV format.
+
+After executing this method, you cannot restart the cursor.
+The only practical methods remaining for 
+the object at that point are *get_row_count* and *get_header_row*.
 
 ## write_file
 
@@ -275,8 +288,12 @@ If the cursor returns no rows, the file is created/replaced empty, even if a hea
         ,p_do_header            VARCHAR2 := 'N'
     )
 ```
-After executing this method, you cannot restart the cursor. The only practical method remaining for 
-the ojbect is *get_row_count*.
+If *p_do_header* starts with 'Y' or 'y', then the first line in the file will be the column headers
+in CSV format.
+
+After executing this method, you cannot restart the cursor.
+The only practical methods remaining for 
+the object at that point are *get_row_count* and *get_header_row*.
 
 ## get_row_count
 
@@ -291,9 +308,9 @@ processed (does not include the optional header row in the count).
 
 ## get_header_row
 
-Returns the CSV string of column header names. These will be double quoted if the name contains a separator character.
-You can call this method any time after the constructor, but before the last fetch. Generally it is 
-called either before the first fetch or immediately after.
+Returns the CSV string of column header names. Any name that contains a separator character
+will be double quoted. If *p_quote_all_strings* in the constructor call was 'Y', 
+then all names will be double quoted.
 
 ```sql
     MEMBER FUNCTION    get_header_row(
@@ -304,10 +321,12 @@ called either before the first fetch or immediately after.
 ## get_next_row
 
 Returns the next record from the cursor converted into a CSV string. There is no newline.
+When the buffer is empty, as it will be on the first call, it fetches the next array of
+rows then returns the first.
 
-When all rows have been 
-processed, it returns NULL, and the cursor cannot be restarted. The only practical method remaining for 
-the ojbect at that point is *get_row_count*.
+When all rows have been processed, it returns NULL.
+The cursor cannot be restarted. The only practical methods remaining for 
+the object at that point are *get_row_count* and *get_header_row*.
 
 ```sql
     MEMBER FUNCTION    get_next_row(

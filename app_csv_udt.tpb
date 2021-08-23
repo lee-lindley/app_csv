@@ -131,7 +131,8 @@ SOFTWARE.
         FOR i IN 1..col_cnt
         LOOP
             v_col_name := col_names(i);
-            IF REGEXP_INSTR(v_col_name, '['||separator||chr(10)||']') > 0 -- contains separator or newline
+            IF quote_all_strings = 'Y'
+                OR REGEXP_INSTR(v_col_name, '['||separator||chr(10)||']') > 0 -- contains separator or newline
                 THEN v_col_name := '"'
                         ||REPLACE(v_col_name, '"', '""') -- double up dquotes inside field to *quote* them
                         ||'"'
