@@ -1,4 +1,5 @@
 CREATE OR REPLACE TYPE BODY app_csv_udt AS
+-- https://github.com/lee-lindely/app_csv
 /*
 MIT License
 
@@ -60,6 +61,7 @@ SOFTWARE.
         separator := p_separator;
         num_format := p_num_format;
         date_format := p_date_format;
+        interval_format := p_interval_format;
         quote_all_strings := CASE WHEN UPPER(p_quote_all_strings) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
 
         ctx := app_dbms_sql.convert_cursor(p_cursor => p_cursor, p_bulk_count => p_bulk_count);
@@ -266,6 +268,7 @@ SOFTWARE.
             ,p_separator            => p_separator
             ,p_num_format           => p_num_format
             ,p_date_format          => p_date_format
+            ,p_interval_format      => p_interval_format
             ,p_bulk_count           => p_bulk_count
             ,p_quote_all_strings    => p_quote_all_strings
         );
