@@ -46,7 +46,7 @@ SOFTWARE.
         v_desc_tab          DBMS_SQL.desc_tab3;
         v_number_tab        DBMS_SQL.number_table;
         v_date_tab          DBMS_SQL.date_table;
-        v_string_tab        DBMS_SQL.varchar2_table;
+        v_string_tab        DBMS_SQL.varchar2a_table;
 
         -- based on dbms_sql column info, get down to basic types that can be converted into
         FUNCTION lookup_col_type(p_col_type INTEGER)
@@ -151,7 +151,7 @@ SOFTWARE.
         v_str   VARCHAR2(32767); -- maxes at 4000 if calling table function from sql
         v_date_tab      DBMS_SQL.date_table;
         v_number_tab    DBMS_SQL.number_table;
-        v_string_tab    DBMS_SQL.varchar2_table;
+        v_string_tab    DBMS_SQL.varchar2a_table;
 
         FUNCTION get_col_val(
             p_col INTEGER -- column index starting at 1
@@ -193,9 +193,9 @@ SOFTWARE.
         BEGIN
             fetched_rows := DBMS_SQL.fetch_rows(ctx);
             IF fetched_rows = 0 THEN
-                ctx := NULL;
                 row_index := 0;
                 DBMS_SQL.close_cursor(ctx);
+                --ctx := NULL; -- close_cursor does this to the var already
             ELSE
                 total_rows_fetched := total_rows_fetched + fetched_rows;
                 row_index := 1;
@@ -210,7 +210,7 @@ SOFTWARE.
                 -- the last call returned less than requested rows so we are done
                 row_index := 0;
                 DBMS_SQL.close_cursor(ctx);
-                ctx := NULL;
+                --ctx := NULL; -- close_cursor does this to the var already
                 RETURN NULL;
             END IF;
             fetch_rows;
@@ -228,6 +228,11 @@ SOFTWARE.
             v_str := v_str||separator||get_col_val(j);
         END LOOP;
         RETURN v_str;
+    EXCEPTION WHEN OTHERS THEN
+        IF DBMS_SQL.IS_OPEN(ctx) THEN
+            DBMS_SQL.CLOSE_CURSOR(ctx);
+        END IF;
+        RAISE;
     END;
 
 

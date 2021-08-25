@@ -356,7 +356,7 @@ Normally one would set this when calling the constructor.
     )
 
 ```
-# set_num_format
+## set_num_format
 
 Normally one would set this when calling the constructor.
 
