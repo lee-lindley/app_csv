@@ -6,15 +6,17 @@ BEGIN
         SELECT TO_CHAR(employee_id) AS "Emp ID", last_name||', '||first_name AS "Fname", hire_date AS "Date,Hire,YYYYMMDD", salary AS "Salary"
         from hr.employees
         UNION ALL
-        SELECT '999' AS "Emp ID", 'Baggins, Bilbo "badboy"' AS "Fname", TO_DATE('19991231','YYYYMMDD') AS "Date,Hire,YYYYMMDD", 123.45 AS "Salary"
+        SELECT '999' AS "Emp ID", '  Baggins, Bilbo "badboy" ' AS "Fname", TO_DATE('19991231','YYYYMMDD') AS "Date,Hire,YYYYMMDD", 123.45 AS "Salary"
         FROM dual
-      ) ORDER BY "Fname" ;
+      ) ORDER BY LTRIM("Fname") ;
     v_csv := app_csv_udt(
         p_cursor        => v_src
-        ,p_num_format  => '$999,999.99'
+        ,p_do_header    => 'Y'
+        ,p_num_format   => '$999,999.99'
         ,p_date_format  => 'YYYYMMDD'
     );
     v_csv.write_file(p_dir => 'TMP_DIR', p_file_name => 'x.csv', p_do_header => 'Y');
+    v_csv.destructor;
 END;
 /
 set echo off

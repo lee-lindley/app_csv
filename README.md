@@ -3,15 +3,19 @@
 
 Create Comma Separated Value strings (rows) from an Oracle query. 
 
-A CSV row (can be any separator character, but comma (',') and pipe ('|') are most common)
-will have the separator between each field, but not one after the last field (which
-would make it a delimited file rather than separated). If a field contains the separator
+A CSV row will have the separator between each field
+(can be any separator character, but comma (',') and pipe ('|') are most common).
+There is no separator after the last field (which
+would make it a delimited file rather than separated).
+
+If a field contains the separator
 character or newline, then the field value is enclosed in double quotes. In that case, if the field 
 also contains double quotes, then those are doubled up 
 per [RFC4180](https://www.loc.gov/preservation/digital/formats/fdd/fdd000323.shtml).
 
 The resulting set of strings (rows) can be written to a file, collected into a CLOB, or returned from 
-a "TABLE" function in a SQL query via PIPE ROW.
+a "TABLE" function in a SQL query via PIPE ROW. Alternatively, you can loop through the rows (strings) as
+they are returned from the cursor.
 
 # Content
 
@@ -23,7 +27,8 @@ a "TABLE" function in a SQL query via PIPE ROW.
     - [Process Results in a Loop](#process-results-in-a-loop)
 - [Test Directory](#test-directory)
 - [Manual Page](#manual-page)
-    - [Constructor](#constructor)
+    - [app_csv_udt constructor](#app_csv_udt_constructor)
+    - [destructor](#destructor)
     - [get_rows](#get_rows)
     - [get_clob](#get_clob)
     - [write_file](#write_file)
@@ -37,6 +42,15 @@ a "TABLE" function in a SQL query via PIPE ROW.
 # Installation
 
 Clone this repository or download it as a [zip](https://github.com/lee-lindley/app_csv/archive/refs/heads/main.zip) archive.
+
+Note: [plsql_utilties](https://github.com/lee-lindley/plsql_utilities) is provided as a submodule,
+so use the clone command with recursive-submodules option:
+
+`git clone --recursive-submodules https://github.com/lee-lindley/app_csv.git`
+
+or download it separately as a zip 
+archive ([plsql_utilities.zip](https://github.com/lee-lindley/plsql_utilities/archive/refs/heads/main.zip)),
+and extract the content of root folder into *plsql_utilities* folder.
 
 Run *install.sql*
 
@@ -98,6 +112,7 @@ is a contrived example of writing the file, then using TO_CLOB(BFILENAME()) to r
             ,p_date_format  => 'YYYYMMDD'
         );
         v_csv.write_file(p_dir => 'TMP_DIR', p_file_name => 'x.csv', p_do_header => 'Y');
+        v_csv.destructor; -- closes cursor and releases app_dbms_sql context memory
     END;
     /
     set echo off
@@ -134,6 +149,7 @@ See *test/test2.sql* for an example function you can call in a SQL select.
         );
         l_clob := l_csv.get_clob(p_do_header => 'Y', p_separator => '|');
         ...
+        l_csv.destructor; -- closes cursor and releases app_dbms_sql context memory
     END;
 ```
 
@@ -173,19 +189,23 @@ as sending the resulting rows to multiple destinations, or creating a trailer re
             UTL_FILE.put_line(l_file, '---RECORD COUNT: '||TO_CHAR(l_csv.get_row_count));
             UTL_FILE.fclose(v_file);
         END IF;
+        l_csv.destructor; -- closes cursor and releases app_dbms_sql context memory
     END;
 ```
 
 # Test Directory
 
 The *test* directory contains sql files and corresponding CSV outputs. These samples demonstrate much of the 
-available functionality. *test3* explores quoting.
+available functionality. *test3.sql* and *test4.sql* explore quoting and leading/trailing spaces.
 
 # Manual Page
 
-## Constructor
+## app_csv_udt constructor
 
 Creates the object using the provided cursor. Prepares for reading and converting the result set.
+Note that this creates an entry in an associative array in a *app_dbms_sql* package global variable,
+thus if you are not exiting your session soon after finishing with the *app_csv_udt* object,
+you should call *destructor*. Unfortunately, PL/SQL objects do not support automatic destructor calls.
 
 ```sql
     CONSTRUCTOR FUNCTION app_csv_utd(
@@ -193,6 +213,7 @@ Creates the object using the provided cursor. Prepares for reading and convertin
         ,p_separator            VARCHAR2 := ','
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
+        ,p_interval_format      VARCHAR2 := NULL
         ,p_bulk_count           INTEGER := 100
         ,p_quote_all_strings    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
@@ -200,32 +221,43 @@ Creates the object using the provided cursor. Prepares for reading and convertin
 
 *p_separator* is intended to be a single character. The attribute is 2 characters wide if you want to try it that way.
 
-*p_num_format* and *p_date_format* are passed to *TO_CHAR* for number and date/time formats respectively.
+*p_num_format*, *p_interval_format*, and *p_date_format* are passed to *TO_CHAR* for number, interval,
+and date/time formats respectively.
+If NULL, then *TO_CHAR* is called without the second argument. Other non-character column types
+receive the default conversion to character. BLOB and BFILE are returned as NULL.
 
 *p_bulk_count* is the number of records DBMS_SQL will read in each fetch.
 
-When *p_quote_all_strings* starts with a 'Y' or 'y', then all character values are enclosed in double quotes,
-not just the ones that contain a separator or newline.
+When *p_quote_all_strings* starts with a 'Y' or 'y', then all character type values are enclosed in double quotes,
+not just the ones that contain a separator or newline. This applies to the column header names as well. This is significant
+when there are leading or trailing spaces as the default behavior is to trim those from character type column values.
+See *test3* and *test4* "Baggins" records for examples.
 
 Note that numbers and dates can be double quoted. Consider a number format of '$999,999.99' with a comma separator,
 or perhaps a date format that includes a colon with a colon separator.
-Luckily, Excel figures that all out just fine.
+Luckily, Excel figures that all out just fine and treats them as numbers and dates anyway.
+
+## destructor
+
+Calls *app_dbms_sql.close_cursor* which in turn also calls *dbms_sql.close_cursor*. Deletes the *app_dbms_sql* 
+package global associative array entry for the object context.
+It is not required that you call *destructor*. When you exit
+the session, everything is taken care of; however, if you are going to continue operations in the session, it
+is a good idea to call it to free up the memory and resources associated with the cursor.
 
 ## get_rows
 
-This function is not a member method. It calls the constructor for you and uses the object internally.
+This STATIC function is not a member method. It calls the constructor for you and uses the object internally.
 The appropriate use case is to call it from SQL using the construct:
 
 ```sql
     SELECT column_value FROM TABLE(app_csv_udt.get_rows(
-                                    CURSOR(SELECT * FROM hr.departments)
+                                    p_cursor => CURSOR(SELECT * FROM hr.departments)
                                                        )
                                   )
     ;
 ```
-The arguments are the same as the constructor plus *p_do_header*.
-If *p_do_header* starts with 'Y' or 'y', then the first record returned will be the column headers
-in a CSV string.
+That returns each row from the cursor as a single string.
 
 ```sql
    STATIC FUNCTION get_rows(
@@ -234,10 +266,14 @@ in a CSV string.
         ,p_do_header            VARCHAR2 := 'N'
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
+        ,p_interval_format      VARCHAR2 := NULL
         ,p_bulk_count           INTEGER := 100
         ,p_quote_all_strings    VARCHAR2 := 'N'
     ) RETURN arr_varchar2_udt PIPELINED
 ```
+The arguments are the same as the constructor (*app_csv_udt*) plus *p_do_header*.
+If *p_do_header* starts with 'Y' or 'y', then the first record returned will be the column headers
+in a CSV string.
 
 Although you can call this from PL/SQL and iterate through the returned collection, that will instantiate the entire
 result set array before returning control to your program. The *PIPE ROW* optimization is strictly for
@@ -255,6 +291,22 @@ going back out to the SQL engine, the difference is likely lost in the noise.
     ) LOOP
         -- do something with r.column_value
     END LOOP;
+```
+
+Sometimes the cursor you want to pass in can be long and complex. One use of *WITH subqueries* that may surprise 
+you is that you can create a CURSOR using a named *WITH subquery* clause. That way you can build all the complicated
+cursor logic first, then at the end declare it in the CURSOR cast much more simply from the last WITH clause.
+
+```sql
+    WITH wsubquery AS (
+        SELECT * FROM hr.departments ORDER BY department_name
+    ) SELECT t.column_value
+    FROM TABLE(app_csv_udt.get_rows(
+        p_cursor        => CURSOR(SELECT * FROM wsubquery)
+        ,p_separator    => '|'
+        )
+    ) t
+    ;
 ```
 
 ## get_clob
@@ -282,8 +334,7 @@ If the cursor returns no rows, the file is created/replaced empty, even if a hea
 
 ```sql
     MEMBER PROCEDURE write_file(
-        SELF IN OUT NOCOPY      app_csv_udt
-        ,p_dir                  VARCHAR2
+        p_dir                   VARCHAR2
         ,p_file_name            VARCHAR2
         ,p_do_header            VARCHAR2 := 'N'
     )
@@ -301,9 +352,7 @@ Intended to be called after all fetch operations are complete, it returns the nu
 processed (does not include the optional header row in the count).
 
 ```sql
-    MEMBER FUNCTION    get_row_count(
-        SELF IN OUT NOCOPY  app_csv_udt
-    ) RETURN INTEGER
+    MEMBER FUNCTION    get_row_count RETURN INTEGER
 ```
 
 ## get_header_row
@@ -313,16 +362,14 @@ will be double quoted. If *p_quote_all_strings* in the constructor call was 'Y',
 then all names will be double quoted.
 
 ```sql
-    MEMBER FUNCTION    get_header_row(
-        SELF IN OUT NOCOPY  app_csv_udt
-    ) RETURN VARCHAR2
+    MEMBER FUNCTION    get_header_row RETURN VARCHAR2
 ```
 
 ## get_next_row
 
-Returns the next record from the cursor converted into a CSV string. There is no newline.
+Returns the next record converted into a CSV string. There is no newline.
 When the buffer is empty, as it will be on the first call, it fetches the next array of
-rows then returns the first.
+rows then returns the first and iterates through the bulk fetch results on each call before repeating.
 
 When all rows have been processed, it returns NULL.
 The cursor cannot be restarted. The only practical methods remaining for 
@@ -340,8 +387,7 @@ Normally one would set this when calling the constructor.
 
 ```sql
     MEMBER PROCEDURE   set_separator(
-        SELF IN OUT NOCOPY  app_csv_udt
-        ,p_separator        VARCHAR2
+        p_separator         VARCHAR2
     )
 ```
 
@@ -351,8 +397,7 @@ Normally one would set this when calling the constructor.
 
 ```sql
     MEMBER PROCEDURE   set_date_format(
-        SELF IN OUT NOCOPY  app_csv_udt
-        ,p_date_format      VARCHAR2
+        p_date_format       VARCHAR2
     )
 
 ```
@@ -362,7 +407,6 @@ Normally one would set this when calling the constructor.
 
 ```sql
     MEMBER PROCEDURE   set_num_format(
-        SELF IN OUT NOCOPY  app_csv_udt
-        ,p_num_format       VARCHAR2
+        p_num_format        VARCHAR2
     )
 ```

@@ -15,6 +15,7 @@ BEGIN
         DBMS_OUTPUT.put_line(sqlerrm);
         RAISE;
     END;
+    v_csv.destructor;
     RETURN v_clob;
 END;
 /
