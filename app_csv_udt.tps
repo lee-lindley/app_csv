@@ -55,6 +55,7 @@ SOFTWARE.
     ,MEMBER FUNCTION get_clob(
         SELF IN OUT NOCOPY      app_csv_udt
         ,p_do_header            VARCHAR2 := 'N'
+        ,p_lf_only              BOOLEAN := TRUE
     ) RETURN CLOB
     ,MEMBER PROCEDURE write_file(
         p_dir                   VARCHAR2

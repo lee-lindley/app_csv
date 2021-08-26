@@ -188,20 +188,21 @@ SOFTWARE.
     MEMBER FUNCTION get_clob(
         SELF IN OUT NOCOPY  app_csv_udt
         ,p_do_header        VARCHAR2 := 'N'
+        ,p_lf_only              BOOLEAN := TRUE
     ) RETURN CLOB
     IS
         v_clob  CLOB;
         v_str   VARCHAR2(32767);
-        c_crlf  CONSTANT VARCHAR2(2) := CHR(13)||CHR(10);
+        v_crlf  VARCHAR2(2) := CASE WHEN p_lf_only THEN CHR(10) ELSE CHR(13)||CHR(10) END;
     BEGIN
         v_str := get_next_row;
         IF v_str IS NOT NULL THEN -- want to return NULL if no rows. Not a header
             v_clob := '';
             IF UPPER(p_do_header) LIKE 'Y%' THEN
-                v_clob := get_header_row||c_crlf;
+                v_clob := get_header_row||v_crlf;
             END IF;
             LOOP
-                v_clob := v_clob||v_str||c_crlf;
+                v_clob := v_clob||v_str||v_crlf;
                 v_str := get_next_row;
                 EXIT WHEN v_str IS NULL;
             END LOOP;

@@ -295,14 +295,26 @@ going back out to the SQL engine, the difference is likely lost in the noise.
 
 Sometimes the cursor you want to pass in can be long and complex. One use of *WITH subqueries* that may surprise 
 you is that you can create a CURSOR using a named *WITH subquery* clause. That way you can build all the complicated
-cursor logic first, then at the end declare it in the CURSOR cast much more simply from the last WITH clause.
+query logic first, then at the end declare it in the CURSOR cast much more simply from the last WITH clause.
 
 ```sql
-    WITH wsubquery AS (
-        SELECT * FROM hr.departments ORDER BY department_name
-    ) SELECT t.column_value
+    WITH a AS (
+        SELECT 
+            d.department_name  AS "Department Name"
+            ,COUNT(*) OVER (PARTITION BY e.department_id) AS "Department Employee Count"
+            ,e.last_name||', '||e.first_name AS "Employee Name"
+        FROM hr.employees e 
+        INNER JOIN hr.departments d
+            ON d.department_id = e.department_id
+    ), wsubquery AS (
+        SELECT a.*
+        FROM a
+        ORDER BY "Department Name", "Employee Name"
+    ) 
+    SELECT t.column_value
     FROM TABLE(app_csv_udt.get_rows(
         p_cursor        => CURSOR(SELECT * FROM wsubquery)
+        ,p_do_header    => 'Y'
         ,p_separator    => '|'
         )
     ) t
@@ -311,17 +323,21 @@ cursor logic first, then at the end declare it in the CURSOR cast much more simp
 
 ## get_clob
 
-Returns a CLOB containing all of the rows delimited by CR/LF. If the cursor returns no rows, the
+Returns a CLOB containing all of the rows delimited by LF or CR/LF. If the cursor returns no rows, the
 returning CLOB is NULL, even if a header row is called for.
 
 ```sql
    MEMBER FUNCTION get_clob(
         SELF IN OUT NOCOPY  app_csv_udt
         ,p_do_header            VARCHAR2 := 'N'
+        ,p_lf_only              BOOLEAN := TRUE
     ) RETURN CLOB
 ```
 If *p_do_header* starts with 'Y' or 'y', then the first line in the CLOB will be the column headers
 in CSV format.
+
+If *p_lf_only* is TRUE, then the line terminator in the CLOB will be Newline ('\n' or CHR(10)). If FALSE,
+then the line terminator will be Carriage Return and Newline ('\r\n' OR CHR(13)||CHR(10)).
 
 After executing this method, you cannot restart the cursor.
 The only practical methods remaining for 
@@ -341,6 +357,8 @@ If the cursor returns no rows, the file is created/replaced empty, even if a hea
 ```
 If *p_do_header* starts with 'Y' or 'y', then the first line in the file will be the column headers
 in CSV format.
+
+The line terminator is the OS default as determined by *UTL_FILE*.
 
 After executing this method, you cannot restart the cursor.
 The only practical methods remaining for 
