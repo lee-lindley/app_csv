@@ -32,7 +32,7 @@ SOFTWARE.
     ,total_rows_fetched     INTEGER
     ,rows_fetched           INTEGER
     ,row_index              INTEGER
-    ,col_types              arr_varchar2_udt
+    ,col_types              arr_integer_udt
     ,default_num_fmt        VARCHAR2(4000)
     ,default_date_fmt       VARCHAR2(4000)
     ,default_interval_fmt   VARCHAR2(4000)
