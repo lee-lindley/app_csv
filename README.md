@@ -28,16 +28,16 @@ they are returned from the cursor.
 - [Test Directory](#test-directory)
 - [Manual Page](#manual-page)
     - [app_csv_udt constructor](#app_csv_udt_constructor)
-    - [destructor](#destructor)
     - [get_rows](#get_rows)
     - [get_clob](#get_clob)
     - [write_file](#write_file)
     - [get_row_count](#get_row_count)
+    - [get_ctx](#get_ctx)
+    - [get_column_names](#get_column_names)
+    - [get_column_types](#get_column_types)
+    - [set_fmt](#set_fmt)
     - [get_header_row](#get_header_row)
     - [get_next_row](#get_next_row)
-    - [set_separator](#set_separator)
-    - [set_date_format](#set_date_format)
-    - [set_num_format](#set_num_format)
 
 # Installation
 
@@ -58,6 +58,9 @@ If you already have a suitable TABLE type, you can globally replace the string *
 the .tps and .tpb files and comment out the section that creates it in the install file. You could also
 make that a TABLE of CLOB if you have a need for rows longer than 4000 chars in a TABLE function callable
 from SQL. If you are dealing exclusively in PL/SQL, the maximum row length is already 32767.
+
+The same substitutions can be done for *arr_arr_clob_udt* and *arr_clob_udt* if you already have suitable
+replacements.
 
 # Use Cases
 
@@ -112,7 +115,6 @@ is a contrived example of writing the file, then using TO_CLOB(BFILENAME()) to r
             ,p_date_format  => 'YYYYMMDD'
         );
         v_csv.write_file(p_dir => 'TMP_DIR', p_file_name => 'x.csv', p_do_header => 'Y');
-        v_csv.destructor; -- closes cursor and releases app_dbms_sql context memory
     END;
     /
     set echo off
@@ -131,7 +133,7 @@ is a contrived example of writing the file, then using TO_CLOB(BFILENAME()) to r
 
 ## Retrieve a CLOB
 
-The CSV strings can be concatenated into a CLOB with CR/LF after each row. The resulting CLOB can be
+The CSV strings can be concatenated into a CLOB with linefeed (or CR/LF) after each row. The resulting CLOB can be
 attached to an e-mail, written to a file or inserted/updated to a CLOB column in a table. Perhaps
 added to a zip archive. There are many possibilites once you have the CSV content in a CLOB.
 See *test/test2.sql* for an example function you can call in a SQL select.
@@ -147,9 +149,8 @@ See *test/test2.sql* for an example function you can call in a SQL select.
             p_cursor        => l_src
             ,p_num_format   => '099999'
         );
-        l_clob := l_csv.get_clob(p_do_header => 'Y', p_separator => '|');
+        l_csv.get_clob(p_clob => l_clob, p_do_header => 'Y', p_separator => '|');
         ...
-        l_csv.destructor; -- closes cursor and releases app_dbms_sql context memory
     END;
 ```
 
@@ -163,7 +164,7 @@ as sending the resulting rows to multiple destinations, or creating a trailer re
 ```sql
     DECLARE
         l_src   SYS_REFCURSOR;
-        l_rec   VARCHAR2(32767);
+        l_rec   CLOB;
         l_file  UTL_FILE.file_type;
         l_csv   app_csv_udt;
     BEGIN
@@ -172,7 +173,7 @@ as sending the resulting rows to multiple destinations, or creating a trailer re
             p_cursor                => l_src
             ,p_quote_all_strings    => 'Y'
         );
-        l_rec := l_csv.get_next_row;
+        l_csv.get_next_row(p_clob => l_rec);
         IF l_rec IS NOT NULL THEN -- do not want to write anything unless we have data from the cursor
             l_file := UTL_FILE.fopen(
                 filename        => 'my_file_name.csv'
@@ -183,13 +184,12 @@ as sending the resulting rows to multiple destinations, or creating a trailer re
             UTL_FILE.put_line(l_file, l_csv.get_header_row);
             LOOP
                 UTL_FILE.put_line(l_file, l_rec);
-                l_rec := l_csv.get_next_row;
+                l_csv.get_next_row(p_clob => l_rec);
                 EXIT WHEN l_rec IS NULL;
             END LOOP;
             UTL_FILE.put_line(l_file, '---RECORD COUNT: '||TO_CHAR(l_csv.get_row_count));
             UTL_FILE.fclose(v_file);
         END IF;
-        l_csv.destructor; -- closes cursor and releases app_dbms_sql context memory
     END;
 ```
 
@@ -203,9 +203,6 @@ available functionality. *test3.sql* and *test4.sql* explore quoting and leading
 ## app_csv_udt constructor
 
 Creates the object using the provided cursor. Prepares for reading and converting the result set.
-Note that this creates an entry in an associative array in a *app_dbms_sql* package global variable,
-thus if you are not exiting your session soon after finishing with the *app_csv_udt* object,
-you should call *destructor*. Unfortunately, PL/SQL objects do not support automatic destructor calls.
 
 ```sql
     CONSTRUCTOR FUNCTION app_csv_utd(
@@ -224,7 +221,8 @@ you should call *destructor*. Unfortunately, PL/SQL objects do not support autom
 *p_num_format*, *p_interval_format*, and *p_date_format* are passed to *TO_CHAR* for number, interval,
 and date/time formats respectively.
 If NULL, then *TO_CHAR* is called without the second argument. Other non-character column types
-receive the default conversion to character. BLOB and BFILE are returned as NULL.
+receive the default conversion to character. BLOB and BFILE are returned as NULL. You can also specify
+a TO_CHAR conversion format at the column level. See [set_fmt](#set_fmt).
 
 *p_bulk_count* is the number of records DBMS_SQL will read in each fetch.
 
@@ -236,14 +234,6 @@ See *test3* and *test4* "Baggins" records for examples.
 Note that numbers and dates can be double quoted. Consider a number format of '$999,999.99' with a comma separator,
 or perhaps a date format that includes a colon with a colon separator.
 Luckily, Excel figures that all out just fine and treats them as numbers and dates anyway.
-
-## destructor
-
-Calls *app_dbms_sql.close_cursor* which in turn also calls *dbms_sql.close_cursor*. Deletes the *app_dbms_sql* 
-package global associative array entry for the object context.
-It is not required that you call *destructor*. When you exit
-the session, everything is taken care of; however, if you are going to continue operations in the session, it
-is a good idea to call it to free up the memory and resources associated with the cursor.
 
 ## get_rows
 
@@ -327,11 +317,12 @@ Returns a CLOB containing all of the rows delimited by LF or CR/LF. If the curso
 returning CLOB is NULL, even if a header row is called for.
 
 ```sql
-   MEMBER FUNCTION get_clob(
-        SELF IN OUT NOCOPY  app_csv_udt
+   MEMBER PROCEDURE get_clob(
+        SELF IN OUT NOCOPY      app_csv_udt
+        ,p_clob OUT NOCOPY      CLOB
         ,p_do_header            VARCHAR2 := 'N'
         ,p_lf_only              BOOLEAN := TRUE
-    ) RETURN CLOB
+    )
 ```
 If *p_do_header* starts with 'Y' or 'y', then the first line in the CLOB will be the column headers
 in CSV format.
@@ -370,9 +361,38 @@ Intended to be called after all fetch operations are complete, it returns the nu
 processed (does not include the optional header row in the count).
 
 ```sql
-    MEMBER FUNCTION    get_row_count RETURN INTEGER
+    MEMBER FUNCTION get_row_count RETURN INTEGER
 ```
 
+## get_ctx
+
+Returns the context number from DBMS_SQL. Can be used to get *desc_tab*.
+```sql
+    MEMBER FUNCTION get_ctx RETURN INTEGER
+```
+## get_column_names
+
+As returned in DBMS_SQL.desc_tab3.
+```sql
+    MEMBER FUNCTION get_column_names   RETURN arr_varchar2_udt
+```
+
+## get_column_types
+
+As returned in DBMS_SQL.desc_tab3.
+```sql
+    MEMBER FUNCTION get_column_types   RETURN arr_varchar2_udt
+```
+
+## set_fmt
+
+Configure a column specific TO_CHAR conversion format string.
+```sql
+    MEMBER PROCEDURE set_fmt(
+        ,p_col_index        BINARY_INTEGER
+        ,p_fmt              VARCHAR2
+    )
+```
 ## get_header_row
 
 Returns the CSV string of column header names. Any name that contains a separator character
@@ -394,37 +414,9 @@ The cursor cannot be restarted. The only practical methods remaining for
 the object at that point are *get_row_count* and *get_header_row*.
 
 ```sql
-    MEMBER FUNCTION    get_next_row(
+    MEMBER PROCEDURE get_next_row(
         SELF IN OUT NOCOPY  app_csv_udt
+        ,p_clob OUT NOCOPY  CLOB
     ) RETURN VARCHAR2
 ```
 
-## set_separator
-
-Normally one would set this when calling the constructor.
-
-```sql
-    MEMBER PROCEDURE   set_separator(
-        p_separator         VARCHAR2
-    )
-```
-
-## set_date_format
-
-Normally one would set this when calling the constructor.
-
-```sql
-    MEMBER PROCEDURE   set_date_format(
-        p_date_format       VARCHAR2
-    )
-
-```
-## set_num_format
-
-Normally one would set this when calling the constructor.
-
-```sql
-    MEMBER PROCEDURE   set_num_format(
-        p_num_format        VARCHAR2
-    )
-```
