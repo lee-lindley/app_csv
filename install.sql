@@ -7,6 +7,8 @@ set define on
 define subdir=plsql_utilities/app_types
 prompt &&subdir/arr_varchar2_udt.tps
 @&&subdir/arr_varchar2_udt.tps
+prompt &&subdir/arr_integer_udt.tps
+@&&subdir/arr_integer_udt.tps
 prompt &&subdir/arr_clob_udt.tps
 @&&subdir/arr_clob_udt.tps
 prompt &&subdir/arr_arr_clob_udt.tps
