@@ -24,3 +24,13 @@ prompt app_csv_udt.tpb
 @app_csv_udt.tpb
 ALTER SESSION SET plsql_optimize_level=2;
 ALTER SESSION SET plsql_code_type = INTERPRETED;
+--
+prompt running compile_schema for invalid objects
+BEGIN
+    DBMS_UTILITY.compile_schema( schema => SYS_CONTEXT('userenv','current_schema')
+                                ,compile_all => FALSE
+                                ,reuse_settings => TRUE
+                            );
+END;
+/
+
