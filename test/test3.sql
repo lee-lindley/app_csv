@@ -16,7 +16,6 @@ BEGIN
         ,p_date_format  => 'YYYYMMDD'
     );
     v_csv.write_file(p_dir => 'TMP_DIR', p_file_name => 'x.csv', p_do_header => 'Y');
-    v_csv.destructor;
 END;
 /
 set echo off

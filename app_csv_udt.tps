@@ -1,4 +1,4 @@
-CREATE OR REPLACE TYPE app_csv_udt AUTHID CURRENT_USER AS OBJECT (
+CREATE OR REPLACE TYPE app_csv_udt AUTHID CURRENT_USER UNDER app_dbms_sql_str_udt (
 -- https://github.com/lee-lindely/app_csv
 /*
 MIT License
@@ -24,39 +24,56 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-    ctx                         INTEGER                 -- dbms_sql context
-    ,separator                  VARCHAR2(2)
-    ,num_format                 VARCHAR2(30)
-    ,date_format                VARCHAR2(30)
-    ,interval_format            VARCHAR2(30)
+     /*
+     --from supertypes
+     ctx                    INTEGER
+    ,col_cnt                INTEGER
+    ,bulk_cnt               INTEGER
+    ,total_rows_fetched     INTEGER
+    ,rows_fetched           INTEGER
+    ,row_index              INTEGER
+    ,col_types              arr_varchar2_udt
+    ,default_num_fmt        VARCHAR2(4000)
+    ,default_date_fmt       VARCHAR2(4000)
+    ,default_interval_fmt   VARCHAR2(4000)
+    ,arr_fmts               arr_varchar2_udt
+    ,buf                    arr_arr_clob_udt
+
+    You also have this member procedure available to set TO_CHAR conversion formats
+    on individual fields:
+
+    MEMBER PROCEDURE set_fmt(
+        ,p_col_index        BINARY_INTEGER
+        ,p_fmt              VARCHAR2
+    )
+
+
+     */
+     separator                  VARCHAR2(2)
     ,quote_all_strings          VARCHAR2(1)
-    ,col_types                  arr_varchar2_udt
+    ,csv_col_types              arr_varchar2_udt
     --
     ,CONSTRUCTOR FUNCTION app_csv_udt(
         p_cursor                SYS_REFCURSOR
         ,p_separator            VARCHAR2 := ','
-        -- you can set these to NULL if you want the default TO_CHAR
+        ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_bulk_count           INTEGER := 100
+        -- you can set these to NULL if you want the default TO_CHAR conversions
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
         --
-        ,p_bulk_count           INTEGER := 100
-        ,p_quote_all_strings    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
-    -- closes the cursor but also cuts off access to get_row_count and get_header_row
-    -- Unfortunate that Oracle does not provide an automatic destructor. Worst case
-    -- if you do not call it is that structures in memory and the cursor hang around
-    -- until the session ends. The package global variables in app_dbms_sql will NOT
-    -- dissapear when the object goes out of scope and that includes the cursor.
+    -- vestigal method that does nothing useful. It will close the cursor
+    -- if you want to quit before fetching all rows
     ,MEMBER PROCEDURE   destructor
     --
-    -- call this AFTER getting all the rows. Intermediate value is number of rows fetched
-    ,MEMBER FUNCTION get_row_count RETURN BINARY_INTEGER
-    ,MEMBER FUNCTION get_clob(
+    ,MEMBER PROCEDURE get_clob(
         SELF IN OUT NOCOPY      app_csv_udt
+        ,p_clob OUT NOCOPY      CLOB
         ,p_do_header            VARCHAR2 := 'N'
         ,p_lf_only              BOOLEAN := TRUE
-    ) RETURN CLOB
+    ) 
     ,MEMBER PROCEDURE write_file(
         p_dir                   VARCHAR2
         ,p_file_name            VARCHAR2
@@ -78,20 +95,12 @@ SOFTWARE.
     --
     -- If you are doing your own loop...
     --
-    ,MEMBER FUNCTION    get_header_row RETURN VARCHAR2
-    ,MEMBER FUNCTION    get_next_row (
+    ,MEMBER FUNCTION    get_header_row RETURN CLOB
+
+    ,MEMBER PROCEDURE   get_next_row (
         SELF IN OUT NOCOPY  app_csv_udt
-    ) RETURN VARCHAR2
-    -- unlikely, but maybe you do not know what these should be when you call the constructor
-    ,MEMBER PROCEDURE   set_separator(
-        p_separator         VARCHAR2
-    )
-    ,MEMBER PROCEDURE   set_date_format(
-        p_date_format       VARCHAR2
-    )
-    ,MEMBER PROCEDURE   set_num_format(
-        p_num_format        VARCHAR2
-    )
+        ,p_clob OUT NOCOPY  CLOB
+    ) 
 );
 /
 show errors

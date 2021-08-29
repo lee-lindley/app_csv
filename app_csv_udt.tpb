@@ -25,24 +25,16 @@ SOFTWARE.
 */
 
 
-    MEMBER FUNCTION get_row_count RETURN BINARY_INTEGER
-    IS
-    BEGIN
-        RETURN app_dbms_sql.get_row_count(ctx);
-    END;
-
-
     CONSTRUCTOR FUNCTION app_csv_udt(
         p_cursor                SYS_REFCURSOR
         ,p_separator            VARCHAR2 := ','
+        ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_bulk_count           INTEGER := 100
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
-        ,p_bulk_count           INTEGER := 100
-        ,p_quote_all_strings    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
     IS
-        v_desc_tab3             DBMS_SQL.desc_tab3;
         -- based on dbms_sql column info, get down to basic types that can be converted into
         FUNCTION lookup_col_type(p_col_type INTEGER)
         RETURN VARCHAR2 -- D ate, N umber, C har
@@ -58,67 +50,42 @@ SOFTWARE.
                     END;
         END;
     BEGIN
+        SELF.app_dbms_sql_str_constructor(
+            p_cursor                => p_cursor
+            ,p_bulk_count           => p_bulk_count
+            ,p_default_num_fmt      => p_num_format
+            ,p_default_date_fmt     => p_date_format
+            ,p_default_interval_fmt => p_interval_format
+        );
         separator := p_separator;
-        num_format := p_num_format;
-        date_format := p_date_format;
-        interval_format := p_interval_format;
         quote_all_strings := CASE WHEN UPPER(p_quote_all_strings) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
 
-        ctx := app_dbms_sql.convert_cursor(p_cursor => p_cursor, p_bulk_count => p_bulk_count);
-
-        -- although app_dbms_sql handles conversion to strings, we need to know if the original
+        -- although supertyp handles conversion to strings, we need to know if the original
         -- column was a string or not in order to honor the quote_all_strings directive
-        v_desc_tab3 := app_dbms_sql.get_desc_tab3(ctx);
-        col_types := arr_varchar2_udt();
-        col_types.EXTEND(v_desc_tab3.COUNT);
-        FOR i in 1..v_desc_tab3.COUNT
+        csv_col_types := arr_varchar2_udt();
+        csv_col_types.EXTEND(col_types.COUNT);
+        FOR i in 1..col_types.COUNT
         LOOP
-            col_types(i) := lookup_col_type(v_desc_tab3(i).col_type);
+            csv_col_types(i) := lookup_col_type(col_types(i));
         END LOOP;
         RETURN;
-    EXCEPTION WHEN OTHERS THEN
-        app_dbms_sql.close_cursor(ctx);
-        ctx := NULL;
-        RAISE;
     END;
 
-    -- clears out the context in the hash in package global memory of app_dbms_sql as well
-    -- as dbms_sql. 
     MEMBER PROCEDURE destructor
     IS
     BEGIN
-        app_dbms_sql.close_cursor(ctx);
-        ctx := NULL;
+        IF ctx IS NOT NULL THEN
+            DBMS_SQL.close_cursor(ctx);
+        END IF;
     END;
 
-    MEMBER PROCEDURE   set_date_format(
-        p_date_format       VARCHAR2
-    ) IS
-    BEGIN
-        date_format := p_date_format;
-    END;
-
-    MEMBER PROCEDURE   set_num_format(
-        p_num_format        VARCHAR2
-    ) IS
-    BEGIN
-        num_format := p_num_format;
-    END;
-
-    MEMBER PROCEDURE   set_separator(
-        p_separator         VARCHAR2
-    ) IS
-    BEGIN
-        separator := p_separator;
-    END;
-
-    MEMBER FUNCTION get_header_row RETURN VARCHAR2
+    MEMBER FUNCTION get_header_row RETURN CLOB
     IS
-        v_str       VARCHAR2(32767); -- maxes at 4000 if calling table function from sql
+        v_str       CLOB; -- maxes at 4000 if calling table function from sql
         v_col_name  VARCHAR2(32767);
-        v_a         app_dbms_sql.t_arr_varchar2;
+        v_a         arr_varchar2_udt;
     BEGIN
-        v_a := app_dbms_sql.get_column_names(ctx);
+        v_a := SELF.get_column_names;
         FOR i IN 1..v_a.COUNT
         LOOP
             v_col_name := v_a(i);
@@ -134,19 +101,18 @@ SOFTWARE.
         RETURN v_str;
     END;
 
-    MEMBER FUNCTION get_next_row (
+    MEMBER PROCEDURE get_next_row (
         SELF IN OUT NOCOPY  app_csv_udt
+        ,p_clob OUT NOCOPY  CLOB
     )
-    RETURN VARCHAR2
     IS
-        v_str       VARCHAR2(32767); -- maxes at 4000 if calling table function from sql
-        v_col_val   VARCHAR2(32767);
-        v_a         app_dbms_sql.t_arr_varchar2;
+        v_col_val   CLOB;
+        v_a         arr_clob_udt;
 
-        FUNCTION quote_str(p_col BINARY_INTEGER) RETURN VARCHAR2 IS
-            l_str   VARCHAR2(32767);
+        FUNCTION quote_str(p_col BINARY_INTEGER) RETURN CLOB IS
+            l_str   CLOB;
         BEGIN
-            IF (col_types(p_col) = 'C' AND quote_all_strings = 'Y') THEN 
+            IF (csv_col_types(p_col) = 'C' AND quote_all_strings = 'Y') THEN 
                 -- preserve leading/trailing spaces too.
                 l_str := '"'
                         ||REPLACE(v_a(p_col), '"', '""') -- double up dquotes inside field to *quote* them
@@ -165,61 +131,48 @@ SOFTWARE.
         END;
 
     BEGIN
-        v_a := app_dbms_sql.get_next_column_values(
-            p_ctx               => ctx
-            ,p_num_format       => num_format
-            ,p_date_format      => date_format
-            ,p_interval_format  => interval_format
-        );
+        SELF.get_next_column_values(v_a);
         IF v_a IS NOT NULL THEN
-            v_str := quote_str(1);
+            p_clob := quote_str(1);
             FOR j IN 2..v_a.COUNT
             LOOP
-                v_str := v_str||separator||quote_str(j);
+                p_clob := p_clob||separator||quote_str(j);
             END LOOP;
         END IF;
-        RETURN v_str; -- will be null when all done
-    EXCEPTION WHEN OTHERS THEN
-        destructor;
-        RAISE;
     END;
 
-
-    MEMBER FUNCTION get_clob(
+    MEMBER PROCEDURE get_clob(
         SELF IN OUT NOCOPY  app_csv_udt
+        ,p_clob OUT NOCOPY  CLOB
         ,p_do_header        VARCHAR2 := 'N'
-        ,p_lf_only              BOOLEAN := TRUE
-    ) RETURN CLOB
+        ,p_lf_only          BOOLEAN := TRUE
+    ) 
     IS
-        v_clob  CLOB;
-        v_str   VARCHAR2(32767);
+        v_str   CLOB;
         v_crlf  VARCHAR2(2) := CASE WHEN p_lf_only THEN CHR(10) ELSE CHR(13)||CHR(10) END;
     BEGIN
-        v_str := get_next_row;
+        get_next_row(v_str);
         IF v_str IS NOT NULL THEN -- want to return NULL if no rows. Not a header
-            v_clob := '';
+            p_clob := '';
             IF UPPER(p_do_header) LIKE 'Y%' THEN
-                v_clob := get_header_row||v_crlf;
+                p_clob := get_header_row||v_crlf;
             END IF;
             LOOP
-                v_clob := v_clob||v_str||v_crlf;
-                v_str := get_next_row;
+                p_clob := p_clob||v_str||v_crlf;
+                get_next_row(v_str);
                 EXIT WHEN v_str IS NULL;
             END LOOP;
         END IF;
-        RETURN v_clob;
-    EXCEPTION WHEN OTHERS THEN
-        destructor;
-        RAISE;
     END;
 
 
     MEMBER PROCEDURE write_file(
-        p_dir               VARCHAR2
+        SELF IN OUT NOCOPY  app_csv_udt
+        ,p_dir              VARCHAR2
         ,p_file_name        VARCHAR2
         ,p_do_header        VARCHAR2 := 'N'
     ) IS
-        v_str               VARCHAR2(32767);
+        v_str               CLOB;
         v_file              UTL_FILE.file_type;
     BEGIN
         v_file := UTL_FILE.fopen(
@@ -228,7 +181,7 @@ SOFTWARE.
             ,open_mode      => 'w'
             ,max_linesize   => 32767
         );
-        v_str := get_next_row;
+        get_next_row(v_str);
         IF v_str IS NOT NULL THEN -- we only want a header or any data written if we have rows
             IF UPPER(p_do_header) LIKE 'Y%' THEN
                 UTL_FILE.put_line(v_file, get_header_row);
@@ -236,14 +189,13 @@ SOFTWARE.
 
             LOOP
                 UTL_FILE.put_line(v_file, v_str);
-                v_str := get_next_row;
+                get_next_row(v_str);
                 EXIT WHEN v_str IS NULL;
             END LOOP;
         END IF;
 
         UTL_FILE.fclose(v_file);
     EXCEPTION WHEN OTHERS THEN
-        destructor;
         UTL_FILE.fclose(v_file);
         RAISE;
     END;
@@ -261,7 +213,7 @@ SOFTWARE.
     ) RETURN arr_varchar2_udt
     PIPELINED
     IS
-        v_str               VARCHAR2(4000);
+        v_str               CLOB;
         v_app_csv           app_csv_udt;
     BEGIN
         v_app_csv := app_csv_udt(
@@ -273,23 +225,20 @@ SOFTWARE.
             ,p_bulk_count           => p_bulk_count
             ,p_quote_all_strings    => p_quote_all_strings
         );
-        v_str := v_app_csv.get_next_row;
+        v_app_csv.get_next_row(v_str);
         IF v_str IS NOT NULL THEN -- we only want a header or any data written if we have rows
             IF UPPER(p_do_header) LIKE 'Y%' THEN
                 PIPE ROW(v_app_csv.get_header_row);
             END IF;
 
             LOOP
+                -- if it is longer than 4000 chars I assume it will raise an exception
                 PIPE ROW(v_str);
-                v_str := v_app_csv.get_next_row;
+                v_app_csv.get_next_row(v_str);
                 EXIT WHEN v_str IS NULL;
             END LOOP;
         END IF;
-        v_app_csv.destructor;
         RETURN;
-    EXCEPTION WHEN OTHERS THEN
-        v_app_csv.destructor;
-        RAISE;
     END;
 
 END;

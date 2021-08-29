@@ -10,12 +10,11 @@ BEGIN
         ,p_num_format  => '099999'
     );
     BEGIN
-        v_clob := v_csv.get_clob(p_do_header => 'Y');
+        v_csv.get_clob(p_clob => v_clob, p_do_header => 'Y');
     EXCEPTION WHEN OTHERS THEN
         DBMS_OUTPUT.put_line(sqlerrm);
         RAISE;
     END;
-    v_csv.destructor;
     RETURN v_clob;
 END;
 /

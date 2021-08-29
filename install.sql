@@ -1,11 +1,16 @@
+whenever sqlerror continue
+prompt ok for drop to fail if type does not exist
+drop type app_csv_udt;
+prompt ok if drop failed for type does not exist
 whenever sqlerror exit failure
 set define on
--- if you already have a suitable type TABLE OF VARCHAR2(4000) then you can
--- do a global substitution in app_csv_udt.tbps and app_csv_udt.tbp, 
--- then comment out this call for arr_varchar2_udt.
-define subdir=plsql_utilities
+define subdir=plsql_utilities/app_types
 prompt &&subdir/arr_varchar2_udt.tps
 @&&subdir/arr_varchar2_udt.tps
+prompt &&subdir/arr_clob_udt.tps
+@&&subdir/arr_clob_udt.tps
+prompt &&subdir/arr_arr_clob_udt.tps
+@&&subdir/arr_arr_clob_udt.tps
 -- these settings are a personal preference. 
 ALTER SESSION SET plsql_code_type = NATIVE;
 ALTER SESSION SET plsql_optimize_level=3;
