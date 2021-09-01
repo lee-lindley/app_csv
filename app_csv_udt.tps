@@ -39,16 +39,21 @@ SOFTWARE.
     ,arr_fmts               arr_varchar2_udt
     ,buf                    arr_arr_clob_udt
 
+    MEMBER FUNCTION get_ctx            RETURN INTEGER
+    MEMBER FUNCTION get_column_names   RETURN arr_varchar2_udt
+    MEMBER FUNCTION get_column_types   RETURN arr_integer_udt
+    MEMBER FUNCTION get_row_count RETURN INTEGER
+
+
     You also have this member procedure available to set TO_CHAR conversion formats
     on individual fields:
-
     MEMBER PROCEDURE set_fmt(
         ,p_col_index        BINARY_INTEGER
         ,p_fmt              VARCHAR2
     )
 
-
      */
+
      separator                  VARCHAR2(2)
     ,quote_all_strings          VARCHAR2(1)
     ,csv_col_types              arr_varchar2_udt
