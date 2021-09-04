@@ -55,12 +55,12 @@ and extract the content of root folder into *plsql_utilities* folder.
 Run *install.sql*
 
 If you already have a suitable TABLE type, you can globally replace the string *arr_varchar2_udt* in
-the .tps and .tpb files and comment out the section that creates it in the install file. You could also
-make that a TABLE of CLOB if you have a need for rows longer than 4000 chars in a TABLE function callable
-from SQL. If you are dealing exclusively in PL/SQL, the maximum row length is already 32767.
+the .tps and .tpb files and comment out the section that creates it in the install file. Same is true
+for *arr_integer_udt*, *arr_clob_udt* and *arr_arr_clob_udt*, but you will also need to dig around
+in *plsql_utilities/app_dbms_sql* replacing those.  You could also
+change the return type of *get_rows* to TABLE of CLOB if you have a need for rows longer than 4000 chars 
+in a TABLE function callable from SQL. If you are dealing exclusively in PL/SQL, the rows are already CLOB.
 
-The same substitutions can be done for *arr_arr_clob_udt* and *arr_clob_udt* if you already have suitable
-replacements.
 
 # Use Cases
 
@@ -393,6 +393,14 @@ Configure a column specific TO_CHAR conversion format string.
         ,p_fmt              VARCHAR2
     )
 ```
+If the first column of the query is a number and you want it to be formatted as currency with
+comma separators and two digits after the decimal...
+```sql
+    v_csv.set_fmt(p_col_index => 1, p_fmr => '$999,999,999.99');
+```
+You could just as easily done that conversion with TO_CHAR in the query itself, but perhaps
+you have a cursor you cannot conveniently change.
+
 ## get_header_row
 
 Returns the CSV string of column header names. Any name that contains a separator character
@@ -409,7 +417,7 @@ Returns the next record converted into a CSV string. There is no newline.
 When the buffer is empty, as it will be on the first call, it fetches the next array of
 rows then returns the first and iterates through the bulk fetch results on each call before repeating.
 
-When all rows have been processed, it returns NULL.
+When all rows have been processed, the variable passed as parameter p_clob will be NULL.
 The cursor cannot be restarted. The only practical methods remaining for 
 the object at that point are *get_row_count* and *get_header_row*.
 
@@ -417,6 +425,6 @@ the object at that point are *get_row_count* and *get_header_row*.
     MEMBER PROCEDURE get_next_row(
         SELF IN OUT NOCOPY  app_csv_udt
         ,p_clob OUT NOCOPY  CLOB
-    ) RETURN VARCHAR2
+    )
 ```
 
