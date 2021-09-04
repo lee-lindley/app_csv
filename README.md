@@ -381,7 +381,7 @@ As returned in DBMS_SQL.desc_tab3.
 
 As returned in DBMS_SQL.desc_tab3.
 ```sql
-    MEMBER FUNCTION get_column_types   RETURN arr_varchar2_udt
+    MEMBER FUNCTION get_column_types   RETURN arr_integer_udt
 ```
 
 ## set_fmt
@@ -408,7 +408,7 @@ will be double quoted. If *p_quote_all_strings* in the constructor call was 'Y',
 then all names will be double quoted.
 
 ```sql
-    MEMBER FUNCTION    get_header_row RETURN VARCHAR2
+    MEMBER FUNCTION    get_header_row RETURN CLOB
 ```
 
 ## get_next_row
