@@ -33,6 +33,7 @@ they are returned from the cursor.
     - [write_file](#write_file)
     - [get_row_count](#get_row_count)
     - [get_ctx](#get_ctx)
+    - [set_column_name](#set_column_name)
     - [get_column_names](#get_column_names)
     - [get_column_types](#get_column_types)
     - [set_fmt](#set_fmt)
@@ -370,9 +371,23 @@ Returns the context number from DBMS_SQL. Can be used to get *desc_tab*.
 ```sql
     MEMBER FUNCTION get_ctx RETURN INTEGER
 ```
+## set_column_name
+
+If you cannot use the column alias of the query to make the column name what you need in the CSV file,
+then you can change it after constructing the object. One example of that need is if you need to
+use an Oracle reserved word in the CSV header row. Another might be that you do not control the cursor.
+```sql
+    MEMBER PROCEDURE set_column_name(
+        SELF IN OUT NOCOPY      app_dbms_sql_udt
+        ,p_col_index            INTEGER
+        ,p_col_name             VARCHAR2
+    )
+
+```
+
 ## get_column_names
 
-As returned in DBMS_SQL.desc_tab3.
+As returned in DBMS_SQL.desc_tab3 or overridden with set_column_name.
 ```sql
     MEMBER FUNCTION get_column_names   RETURN arr_varchar2_udt
 ```

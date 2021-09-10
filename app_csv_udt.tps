@@ -33,6 +33,7 @@ SOFTWARE.
     ,rows_fetched           INTEGER
     ,row_index              INTEGER
     ,col_types              arr_integer_udt
+    ,col_names              arr_varchar2_udt
     ,default_num_fmt        VARCHAR2(4000)
     ,default_date_fmt       VARCHAR2(4000)
     ,default_interval_fmt   VARCHAR2(4000)
@@ -40,6 +41,11 @@ SOFTWARE.
     ,buf                    arr_arr_clob_udt
 
     MEMBER FUNCTION get_ctx            RETURN INTEGER
+    MEMBER PROCEDURE set_column_name(
+        SELF IN OUT NOCOPY      app_dbms_sql_udt
+        ,p_col_index            INTEGER
+        ,p_col_name             VARCHAR2
+    )
     MEMBER FUNCTION get_column_names   RETURN arr_varchar2_udt
     MEMBER FUNCTION get_column_types   RETURN arr_integer_udt
     MEMBER FUNCTION get_row_count RETURN INTEGER

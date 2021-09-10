@@ -196,7 +196,9 @@ SOFTWARE.
 
         UTL_FILE.fclose(v_file);
     EXCEPTION WHEN OTHERS THEN
-        UTL_FILE.fclose(v_file);
+        IF UTL_FILE.is_open(v_file)
+            THEN UTL_FILE.fclose(v_file);
+        END IF;
         RAISE;
     END;
 
