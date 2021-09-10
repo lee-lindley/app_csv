@@ -29,6 +29,7 @@ SOFTWARE.
         p_cursor                SYS_REFCURSOR
         ,p_separator            VARCHAR2 := ','
         ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote
         ,p_bulk_count           INTEGER := 100
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
@@ -59,6 +60,7 @@ SOFTWARE.
         );
         separator := p_separator;
         quote_all_strings := CASE WHEN UPPER(p_quote_all_strings) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
+        strip_separator := CASE WHEN UPPER(p_strip_separator) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
 
         -- although supertyp handles conversion to strings, we need to know if the original
         -- column was a string or not in order to honor the quote_all_strings directive
@@ -89,7 +91,9 @@ SOFTWARE.
         FOR i IN 1..v_a.COUNT
         LOOP
             v_col_name := v_a(i);
-            IF quote_all_strings = 'Y'
+            IF strip_separator = 'Y' THEN
+                v_col_name := REPLACE(v_col_name, separator);
+            ELSIF quote_all_strings = 'Y'
                 OR REGEXP_INSTR(v_col_name, '['||separator||chr(10)||']') > 0 -- contains separator or newline
                 THEN v_col_name := '"'
                         ||REPLACE(v_col_name, '"', '""') -- double up dquotes inside field to *quote* them
@@ -112,14 +116,16 @@ SOFTWARE.
         FUNCTION quote_str(p_col BINARY_INTEGER) RETURN CLOB IS
             l_str   CLOB;
         BEGIN
+            l_str := REPLACE(v_a(p_col), CASE WHEN strip_separator = 'Y' THEN separator END); -- null replacement string is noop
+
             IF (csv_col_types(p_col) = 'C' AND quote_all_strings = 'Y') THEN 
                 -- preserve leading/trailing spaces too.
                 l_str := '"'
-                        ||REPLACE(v_a(p_col), '"', '""') -- double up dquotes inside field to *quote* them
+                        ||REPLACE(l_str, '"', '""') -- double up dquotes inside field to *quote* them
                         ||'"'
                     ;
             ELSE
-                l_str := TRIM(v_a(p_col)); 
+                l_str := TRIM(l_str); 
                 IF REGEXP_INSTR(l_str, '['||separator||chr(10)||']') > 0 THEN -- contains separator or newline
                     l_str := '"'
                         ||REPLACE(l_str, '"', '""') -- double up dquotes inside field to *quote* them

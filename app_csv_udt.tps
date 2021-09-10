@@ -62,12 +62,14 @@ SOFTWARE.
 
      separator                  VARCHAR2(2)
     ,quote_all_strings          VARCHAR2(1)
+    ,strip_separator            VARCHAR2(1)
     ,csv_col_types              arr_varchar2_udt
     --
     ,CONSTRUCTOR FUNCTION app_csv_udt(
         p_cursor                SYS_REFCURSOR
         ,p_separator            VARCHAR2 := ','
         ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote them
         ,p_bulk_count           INTEGER := 100
         -- you can set these to NULL if you want the default TO_CHAR conversions
         ,p_num_format           VARCHAR2 := 'tm9'

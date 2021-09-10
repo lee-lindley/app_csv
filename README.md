@@ -209,11 +209,12 @@ Creates the object using the provided cursor. Prepares for reading and convertin
     CONSTRUCTOR FUNCTION app_csv_utd(
         p_cursor                SYS_REFCURSOR
         ,p_separator            VARCHAR2 := ','
+        ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote
+        ,p_bulk_count           INTEGER := 100
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
-        ,p_bulk_count           INTEGER := 100
-        ,p_quote_all_strings    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
 ```
 
@@ -226,6 +227,9 @@ receive the default conversion to character. BLOB and BFILE are returned as NULL
 a TO_CHAR conversion format at the column level. See [set_fmt](#set_fmt).
 
 *p_bulk_count* is the number of records DBMS_SQL will read in each fetch.
+
+When *p_strip_separator* starts with a 'Y' or 'y', then the separator character is stripped from all column values
+and column header names.
 
 When *p_quote_all_strings* starts with a 'Y' or 'y', then all character type values are enclosed in double quotes,
 not just the ones that contain a separator or newline. This applies to the column header names as well. This is significant

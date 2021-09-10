@@ -11,7 +11,6 @@ BEGIN
       ) ORDER BY LTRIM("Fname") ;
     v_csv := app_csv_udt(
         p_cursor        => v_src
-        ,p_do_header    => 'Y'
         ,p_num_format   => '$999,999.99'
         ,p_date_format  => 'YYYYMMDD'
     );
