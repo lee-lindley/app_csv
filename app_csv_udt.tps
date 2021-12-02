@@ -77,9 +77,20 @@ SOFTWARE.
         ,p_interval_format      VARCHAR2 := NULL
         --
     ) RETURN SELF AS RESULT
-    -- vestigal method that does nothing useful. It will close the cursor
-    -- if you want to quit before fetching all rows
-    ,MEMBER PROCEDURE   destructor
+    -- If you just have a sql string and do not want to open a sys_refcursor, this variant will
+    -- do it for you.
+    ,CONSTRUCTOR FUNCTION app_csv_udt(
+        p_sql                   VARCHAR2
+        ,p_separator            VARCHAR2 := ','
+        ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote them
+        ,p_bulk_count           INTEGER := 100
+        -- you can set these to NULL if you want the default TO_CHAR conversions
+        ,p_num_format           VARCHAR2 := 'tm9'
+        ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
+        ,p_interval_format      VARCHAR2 := NULL
+        --
+    ) RETURN SELF AS RESULT
     --
     ,MEMBER PROCEDURE get_clob(
         SELF IN OUT NOCOPY      app_csv_udt
@@ -114,6 +125,25 @@ SOFTWARE.
         SELF IN OUT NOCOPY  app_csv_udt
         ,p_clob OUT NOCOPY  CLOB
     ) 
+    --
+    -- END OF PUBLIC METHODS. The remainder are only used internally or are not needed
+    --
+    -- does the work for both of the two different constructors
+    -- you will not be calling this. It would be private if that was practical
+    , MEMBER PROCEDURE app_csv_constructor(
+        SELF IN OUT NOCOPY      app_csv_udt
+        ,p_cursor               SYS_REFCURSOR
+        ,p_separator            VARCHAR2 
+        ,p_quote_all_strings    VARCHAR2
+        ,p_strip_separator      VARCHAR2
+        ,p_bulk_count           INTEGER
+        ,p_num_format           VARCHAR2 
+        ,p_date_format          VARCHAR2 
+        ,p_interval_format      VARCHAR2 
+    ) 
+    -- vestigal method that does nothing useful. It will close the cursor
+    -- if you want to quit before fetching all rows
+    ,MEMBER PROCEDURE   destructor
 );
 /
 show errors

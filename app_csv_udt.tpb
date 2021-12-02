@@ -24,17 +24,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
-    CONSTRUCTOR FUNCTION app_csv_udt(
-        p_cursor                SYS_REFCURSOR
-        ,p_separator            VARCHAR2 := ','
-        ,p_quote_all_strings    VARCHAR2 := 'N'
-        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote
-        ,p_bulk_count           INTEGER := 100
-        ,p_num_format           VARCHAR2 := 'tm9'
-        ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
-        ,p_interval_format      VARCHAR2 := NULL
-    ) RETURN SELF AS RESULT
+    MEMBER PROCEDURE app_csv_constructor(
+        SELF IN OUT NOCOPY      app_csv_udt
+        ,p_cursor               SYS_REFCURSOR
+        ,p_separator            VARCHAR2 
+        ,p_quote_all_strings    VARCHAR2
+        ,p_strip_separator      VARCHAR2
+        ,p_bulk_count           INTEGER
+        ,p_num_format           VARCHAR2 
+        ,p_date_format          VARCHAR2 
+        ,p_interval_format      VARCHAR2 
+    ) 
     IS
         -- based on dbms_sql column info, get down to basic types that can be converted into
         FUNCTION lookup_col_type(p_col_type INTEGER)
@@ -58,18 +58,77 @@ SOFTWARE.
             ,p_default_date_fmt     => p_date_format
             ,p_default_interval_fmt => p_interval_format
         );
-        separator := p_separator;
-        quote_all_strings := CASE WHEN UPPER(p_quote_all_strings) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
-        strip_separator := CASE WHEN UPPER(p_strip_separator) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
+        SELF.separator := p_separator;
+        SELF.quote_all_strings := CASE WHEN UPPER(p_quote_all_strings) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
+        SELF.strip_separator := CASE WHEN UPPER(p_strip_separator) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
 
         -- although supertyp handles conversion to strings, we need to know if the original
         -- column was a string or not in order to honor the quote_all_strings directive
-        csv_col_types := arr_varchar2_udt();
-        csv_col_types.EXTEND(col_types.COUNT);
+        SELF.csv_col_types := arr_varchar2_udt();
+        SELF.csv_col_types.EXTEND(SELF.col_types.COUNT);
         FOR i in 1..col_types.COUNT
         LOOP
-            csv_col_types(i) := lookup_col_type(col_types(i));
+            SELF.csv_col_types(i) := lookup_col_type(SELF.col_types(i));
         END LOOP;
+    END;
+
+    CONSTRUCTOR FUNCTION app_csv_udt(
+        p_cursor                SYS_REFCURSOR
+        ,p_separator            VARCHAR2 := ','
+        ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote
+        ,p_bulk_count           INTEGER := 100
+        ,p_num_format           VARCHAR2 := 'tm9'
+        ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
+        ,p_interval_format      VARCHAR2 := NULL
+    ) RETURN SELF AS RESULT
+    IS
+    BEGIN
+        SELF.app_csv_constructor(
+            p_cursor                => p_cursor
+            ,p_separator            => p_separator            
+            ,p_quote_all_strings    => p_quote_all_strings    
+            ,p_strip_separator      => p_strip_separator      
+            ,p_bulk_count           => p_bulk_count           
+            ,p_num_format           => p_num_format           
+            ,p_date_format          => p_date_format          
+            ,p_interval_format      => p_interval_format      
+        );
+        RETURN;
+    END;
+
+
+    CONSTRUCTOR FUNCTION app_csv_udt(
+        p_sql                   VARCHAR2
+        ,p_separator            VARCHAR2 := ','
+        ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote
+        ,p_bulk_count           INTEGER := 100
+        ,p_num_format           VARCHAR2 := 'tm9'
+        ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
+        ,p_interval_format      VARCHAR2 := NULL
+    ) RETURN SELF AS RESULT
+    IS
+        -- based on dbms_sql column info, get down to basic types that can be converted into
+        FUNCTION get_src(p_sql VARCHAR2)
+        RETURN SYS_REFCURSOR
+        IS
+            l_src   SYS_REFCURSOR;
+        BEGIN
+            OPEN l_src FOR p_sql;
+            RETURN l_src;
+        END;
+    BEGIN
+        SELF.app_csv_constructor(
+            p_cursor                => get_src(p_sql)
+            ,p_separator            => p_separator            
+            ,p_quote_all_strings    => p_quote_all_strings    
+            ,p_strip_separator      => p_strip_separator      
+            ,p_bulk_count           => p_bulk_count           
+            ,p_num_format           => p_num_format           
+            ,p_date_format          => p_date_format          
+            ,p_interval_format      => p_interval_format      
+        );
         RETURN;
     END;
 

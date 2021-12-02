@@ -142,12 +142,10 @@ See *test/test2.sql* for an example function you can call in a SQL select.
 ```sql
     DECLARE
         l_clob  CLOB;
-        l_src   SYS_REFCURSOR;
         l_csv   app_csv_udt;
     BEGIN
-        OPEN l_src FOR SELECT * FROM hr.departments ORDER BY department_name;
         l_csv := app_csv_udt(
-            p_cursor        => l_src
+            p_sql           => 'SELECT * FROM hr.departments ORDER BY department_name'
             ,p_num_format   => '099999'
         );
         l_csv.get_clob(p_clob => l_clob, p_do_header => 'Y', p_separator => '|');
@@ -164,14 +162,12 @@ as sending the resulting rows to multiple destinations, or creating a trailer re
 
 ```sql
     DECLARE
-        l_src   SYS_REFCURSOR;
         l_rec   CLOB;
         l_file  UTL_FILE.file_type;
         l_csv   app_csv_udt;
     BEGIN
-        OPEN l_src FOR SELECT * FROM hr.departments;
         l_csv := app_csv_udt(
-            p_cursor                => l_src
+            p_cursor                => 'SELECT * FROM hr.departments'
             ,p_quote_all_strings    => 'Y'
         );
         l_csv.get_next_row(p_clob => l_rec);
@@ -203,7 +199,7 @@ available functionality. *test3.sql* and *test4.sql* explore quoting and leading
 
 ## app_csv_udt constructor
 
-Creates the object using the provided cursor. Prepares for reading and converting the result set.
+Creates the object using the provided cursor or SQL string. Prepares for reading and converting the result set.
 
 ```sql
     CONSTRUCTOR FUNCTION app_csv_utd(
@@ -216,7 +212,23 @@ Creates the object using the provided cursor. Prepares for reading and convertin
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
     ) RETURN SELF AS RESULT
+--
+    CONSTRUCTOR FUNCTION app_csv_utd(
+        p_sql                   CLOB
+        ,p_separator            VARCHAR2 := ','
+        ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote
+        ,p_bulk_count           INTEGER := 100
+        ,p_num_format           VARCHAR2 := 'tm9'
+        ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
+        ,p_interval_format      VARCHAR2 := NULL
+    ) RETURN SELF AS RESULT
 ```
+
+*p_sql* is a string containing a SQL statement that is converted into a SYS_REFCURSOR for you as a convenience.
+
+*p_cursor* is a ref cursor which is more flexible than a simple SQL string since it can use
+bind variables. That includes binding arrays as tables you can select from.
 
 *p_separator* is intended to be a single character. The attribute is 2 characters wide if you want to try it that way.
 
