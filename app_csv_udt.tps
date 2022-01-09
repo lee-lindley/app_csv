@@ -32,13 +32,13 @@ SOFTWARE.
     ,total_rows_fetched     INTEGER
     ,rows_fetched           INTEGER
     ,row_index              INTEGER
-    ,col_types              arr_integer_udt
-    ,col_names              arr_varchar2_udt
+    ,col_types              &&d_arr_integer_udt.
+    ,col_names              &&d_arr_varchar2_udt.
     ,default_num_fmt        VARCHAR2(4000)
     ,default_date_fmt       VARCHAR2(4000)
     ,default_interval_fmt   VARCHAR2(4000)
-    ,arr_fmts               arr_varchar2_udt
-    ,buf                    arr_arr_clob_udt
+    ,arr_fmts               &&d_arr_varchar2_udt.
+    ,buf                    &&d_arr_arr_clob_udt.
 
     MEMBER FUNCTION get_ctx            RETURN INTEGER
     MEMBER PROCEDURE set_column_name(
@@ -46,8 +46,8 @@ SOFTWARE.
         ,p_col_index            INTEGER
         ,p_col_name             VARCHAR2
     )
-    MEMBER FUNCTION get_column_names   RETURN arr_varchar2_udt
-    MEMBER FUNCTION get_column_types   RETURN arr_integer_udt
+    MEMBER FUNCTION get_column_names   RETURN &&d_arr_varchar2_udt.
+    MEMBER FUNCTION get_column_types   RETURN &&d_arr_integer_udt.
     MEMBER FUNCTION get_row_count RETURN INTEGER
 
 
@@ -63,7 +63,7 @@ SOFTWARE.
      separator                  VARCHAR2(2)
     ,quote_all_strings          VARCHAR2(1)
     ,strip_separator            VARCHAR2(1)
-    ,csv_col_types              arr_varchar2_udt
+    ,csv_col_types              &&d_arr_varchar2_udt.
     --
     ,CONSTRUCTOR FUNCTION app_csv_udt(
         p_cursor                SYS_REFCURSOR
@@ -115,7 +115,7 @@ SOFTWARE.
         --
         ,p_bulk_count           INTEGER := 100
         ,p_quote_all_strings    VARCHAR2 := 'N'
-    ) RETURN arr_varchar2_udt PIPELINED
+    ) RETURN &&d_arr_varchar2_udt. PIPELINED
     --
     -- If you are doing your own loop...
     --

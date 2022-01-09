@@ -64,7 +64,7 @@ SOFTWARE.
 
         -- although supertyp handles conversion to strings, we need to know if the original
         -- column was a string or not in order to honor the quote_all_strings directive
-        SELF.csv_col_types := arr_varchar2_udt();
+        SELF.csv_col_types := &&d_arr_varchar2_udt.();
         SELF.csv_col_types.EXTEND(SELF.col_types.COUNT);
         FOR i in 1..col_types.COUNT
         LOOP
@@ -144,7 +144,7 @@ SOFTWARE.
     IS
         v_str       CLOB; -- maxes at 4000 if calling table function from sql
         v_col_name  VARCHAR2(32767);
-        v_a         arr_varchar2_udt;
+        v_a         &&d_arr_varchar2_udt.;
     BEGIN
         v_a := SELF.get_column_names;
         FOR i IN 1..v_a.COUNT
@@ -170,7 +170,7 @@ SOFTWARE.
     )
     IS
         v_col_val   CLOB;
-        v_a         arr_clob_udt;
+        v_a         &&d_arr_clob_udt.;
 
         FUNCTION quote_str(p_col BINARY_INTEGER) RETURN CLOB IS
             l_str   CLOB;
@@ -277,7 +277,7 @@ SOFTWARE.
         ,p_interval_format      VARCHAR2 := NULL
         ,p_bulk_count           INTEGER := 100
         ,p_quote_all_strings    VARCHAR2 := 'N'
-    ) RETURN arr_varchar2_udt
+    ) RETURN &&d_arr_varchar2_udt.
     PIPELINED
     IS
         v_str               CLOB;
