@@ -63,6 +63,7 @@ SOFTWARE.
      separator                  VARCHAR2(2)
     ,quote_all_strings          VARCHAR2(1)
     ,strip_separator            VARCHAR2(1)
+    ,protect_numstr_from_excel  VARCHAR2(1)
     ,csv_col_types              &&d_arr_varchar2_udt.
     --
     ,CONSTRUCTOR FUNCTION app_csv_udt(
@@ -75,6 +76,7 @@ SOFTWARE.
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
         --
     ) RETURN SELF AS RESULT
     -- If you just have a sql string and do not want to open a sys_refcursor, this variant will
@@ -89,6 +91,7 @@ SOFTWARE.
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
         --
     ) RETURN SELF AS RESULT
     --
@@ -115,6 +118,7 @@ SOFTWARE.
         --
         ,p_bulk_count           INTEGER := 100
         ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN &&d_arr_varchar2_udt. PIPELINED
     --
     -- If you are doing your own loop...
@@ -140,6 +144,7 @@ SOFTWARE.
         ,p_num_format           VARCHAR2 
         ,p_date_format          VARCHAR2 
         ,p_interval_format      VARCHAR2 
+        ,p_protect_numstr_from_excel    VARCHAR2 
     ) 
     -- vestigal method that does nothing useful. It will close the cursor
     -- if you want to quit before fetching all rows

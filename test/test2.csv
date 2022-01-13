@@ -1,29 +1,29 @@
 DEPARTMENT_ID,DEPARTMENT_NAME,MANAGER_ID,LOCATION_ID
-110,Accounting,205,1700
-10,Administration,200,1700
-160,Benefits,,1700
-180,Construction,,1700
-190,Contracting,,1700
-140,Control And Credit,,1700
-130,Corporate Tax,,1700
-90,Executive,100,1700
-100,Finance,108,1700
-240,Government Sales,,1700
-40,Human Resources,203,2400
-60,IT,103,1400
-230,IT Helpdesk,,1700
-210,IT Support,,1700
-170,Manufacturing,,1700
-20,Marketing,201,1800
-220,NOC,,1700
-200,Operations,,1700
-270,Payroll,,1700
-70,Public Relations,204,2700
-30,Purchasing,114,1700
-260,Recruiting,,1700
-250,Retail Sales,,1700
-80,Sales,145,2500
-150,Shareholder Services,,1700
-50,Shipping,121,1500
-120,Treasury,,1700
+000110,Accounting,000205,001700
+000010,Administration,000200,001700
+000160,Benefits,,001700
+000180,Construction,,001700
+000190,Contracting,,001700
+000140,Control And Credit,,001700
+000130,Corporate Tax,,001700
+000090,Executive,000100,001700
+000100,Finance,000108,001700
+000240,Government Sales,,001700
+000040,Human Resources,000203,002400
+000060,IT,000103,001400
+000230,IT Helpdesk,,001700
+000210,IT Support,,001700
+000170,Manufacturing,,001700
+000020,Marketing,000201,001800
+000220,NOC,,001700
+000200,Operations,,001700
+000270,Payroll,,001700
+000070,Public Relations,000204,002700
+000030,Purchasing,000114,001700
+000260,Recruiting,,001700
+000250,Retail Sales,,001700
+000080,Sales,000145,002500
+000150,Shareholder Services,,001700
+000050,Shipping,000121,001500
+000120,Treasury,,001700
 

@@ -34,6 +34,7 @@ SOFTWARE.
         ,p_num_format           VARCHAR2 
         ,p_date_format          VARCHAR2 
         ,p_interval_format      VARCHAR2 
+        ,p_protect_numstr_from_excel    VARCHAR2 
     ) 
     IS
         -- based on dbms_sql column info, get down to basic types that can be converted into
@@ -61,6 +62,7 @@ SOFTWARE.
         SELF.separator := p_separator;
         SELF.quote_all_strings := CASE WHEN UPPER(p_quote_all_strings) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
         SELF.strip_separator := CASE WHEN UPPER(p_strip_separator) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
+        SELF.protect_numstr_from_excel := CASE WHEN UPPER(p_protect_numstr_from_excel) LIKE 'Y%' THEN 'Y' ELSE 'N' END;
 
         -- although supertyp handles conversion to strings, we need to know if the original
         -- column was a string or not in order to honor the quote_all_strings directive
@@ -81,6 +83,7 @@ SOFTWARE.
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
     IS
     BEGIN
@@ -93,6 +96,7 @@ SOFTWARE.
             ,p_num_format           => p_num_format           
             ,p_date_format          => p_date_format          
             ,p_interval_format      => p_interval_format      
+            ,p_protect_numstr_from_excel    => p_protect_numstr_from_excel
         );
         RETURN;
     END;
@@ -107,6 +111,7 @@ SOFTWARE.
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
     IS
         -- based on dbms_sql column info, get down to basic types that can be converted into
@@ -128,6 +133,7 @@ SOFTWARE.
             ,p_num_format           => p_num_format           
             ,p_date_format          => p_date_format          
             ,p_interval_format      => p_interval_format      
+            ,p_protect_numstr_from_excel    => p_protect_numstr_from_excel
         );
         RETURN;
     END;
@@ -177,7 +183,15 @@ SOFTWARE.
         BEGIN
             l_str := REPLACE(v_a(p_col), CASE WHEN strip_separator = 'Y' THEN separator END); -- null replacement string is noop
 
-            IF (csv_col_types(p_col) = 'C' AND quote_all_strings = 'Y') THEN 
+            IF csv_col_types(p_col) = 'C' AND protect_numstr_from_excel = 'Y' 
+                AND REGEXP_LIKE(l_str, '^(\s*[+-]?(\d+[.]?\d*)|([.]\d+))$') THEN -- looks like a number but is a string
+                -- this will turn 00123 into "=""00123""" which excel will show as 00123.
+                -- otherwise, excel will treat it like a number and strip leading zeros
+                l_str := '"=""'
+                    ||TRIM(l_str)
+                    ||'"""'
+                    ;
+            ELSIF csv_col_types(p_col) = 'C' AND quote_all_strings = 'Y' THEN 
                 -- preserve leading/trailing spaces too.
                 l_str := '"'
                         ||REPLACE(l_str, '"', '""') -- double up dquotes inside field to *quote* them
@@ -277,6 +291,7 @@ SOFTWARE.
         ,p_interval_format      VARCHAR2 := NULL
         ,p_bulk_count           INTEGER := 100
         ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN &&d_arr_varchar2_udt.
     PIPELINED
     IS
@@ -291,6 +306,7 @@ SOFTWARE.
             ,p_interval_format      => p_interval_format
             ,p_bulk_count           => p_bulk_count
             ,p_quote_all_strings    => p_quote_all_strings
+            ,p_protect_numstr_from_excel    => p_protect_numstr_from_excel
         );
         v_app_csv.get_next_row(v_str);
         IF v_str IS NOT NULL THEN -- we only want a header or any data written if we have rows

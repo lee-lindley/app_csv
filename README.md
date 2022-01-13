@@ -55,13 +55,12 @@ and extract the content of root folder into *plsql_utilities* folder.
 
 Run *install.sql*
 
-If you already have a suitable TABLE type, you can globally replace the string *arr_varchar2_udt* in
-the .tps and .tpb files and comment out the section that creates it in the install file. Same is true
-for *arr_integer_udt*, *arr_clob_udt* and *arr_arr_clob_udt*, but you will also need to dig around
-in *plsql_utilities/app_dbms_sql* replacing those.  You could also
+If you already have a suitable TABLE type, you can update the sqlplus define variable *d_arr_varchar2_udt*
+and comment out the section that creates it in the install file. Same is true
+for *d_arr_integer_udt*, *d_arr_clob_udt* and *d_arr_arr_clob_udt*.
+You could also
 change the return type of *get_rows* to TABLE of CLOB if you have a need for rows longer than 4000 chars 
 in a TABLE function callable from SQL. If you are dealing exclusively in PL/SQL, the rows are already CLOB.
-
 
 # Use Cases
 
@@ -211,6 +210,7 @@ Creates the object using the provided cursor or SQL string. Prepares for reading
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
 --
     CONSTRUCTOR FUNCTION app_csv_utd(
@@ -222,6 +222,7 @@ Creates the object using the provided cursor or SQL string. Prepares for reading
         ,p_num_format           VARCHAR2 := 'tm9'
         ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
         ,p_interval_format      VARCHAR2 := NULL
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
 ```
 
@@ -252,6 +253,15 @@ Note that numbers and dates can be double quoted. Consider a number format of '$
 or perhaps a date format that includes a colon with a colon separator.
 Luckily, Excel figures that all out just fine and treats them as numbers and dates anyway.
 
+*p_protect_numstr_from_excel* handles the
+flip side of Excel treating strings that look like numbers as numbers even when you do not want it too.
+Consider an ID field that is a VARCHAR2 that contains leading zeros like '00123456'. Excel turns that into 123456.
+If you set *p_protect_numstr_from_excel* to 'Y', we will look at all fields that are Character types in the 
+input resultset to see if they match regular expression '^(\s*[+-]?(\d+[.]?\d*)|([.]\d+))$' and would be treated
+by excel as a number. If so, we use magic pixie dust to encase your number lookalike string with "=""00123456""".
+Yes, really. That is how you tell Excel to leave your numeric looking string alone and present it as text.
+Don't believe me? Google it.
+
 ## get_rows
 
 This STATIC function is not a member method. It calls the constructor for you and uses the object internally.
@@ -276,19 +286,20 @@ That returns each row from the cursor as a single string.
         ,p_interval_format      VARCHAR2 := NULL
         ,p_bulk_count           INTEGER := 100
         ,p_quote_all_strings    VARCHAR2 := 'N'
+        ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN arr_varchar2_udt PIPELINED
 ```
 The arguments are the same as the constructor (*app_csv_udt*) plus *p_do_header*.
 If *p_do_header* starts with 'Y' or 'y', then the first record returned will be the column headers
 in a CSV string.
 
-Although you can call this from PL/SQL and iterate through the returned collection, that will instantiate the entire
+Although you can call this from PL/SQL in a SELECT and iterate through the returned collection, that will instantiate the entire
 result set array before returning control to your program. The *PIPE ROW* optimization is strictly for
 the SQL engine, not PL/SQL. If you are thinking about using it that
 way, you might be better off with the technique shown in the use 
 case [Process Results in a Loop](#process-results-in-a-loop). That said, it is not uncommon to see functions
-like this called in PL/SQL in an implicit FOR loop. Although it is more efficient to avoid
-going back out to the SQL engine, the difference is likely lost in the noise.
+like this called in PL/SQL in an implicit FOR loop. It is more efficient to avoid
+going back out to the SQL engine, but the difference is likely lost in the noise.
 
 ```sql
     FOR r IN (SELECT column_value FROM TABLE(app_csv_udt.get_rows(
@@ -300,8 +311,9 @@ going back out to the SQL engine, the difference is likely lost in the noise.
     END LOOP;
 ```
 
-Sometimes the cursor you want to pass in can be long and complex. One use of *WITH subqueries* that may surprise 
-you is that you can create a CURSOR using a named *WITH subquery* clause. That way you can build all the complicated
+Sometimes the cursor you want to pass in can be long and complex. One use of *WITH subqueries* 
+(aka Common Table Expressions or CTE) that may surprise 
+you is that you can create a CURSOR using a CTE name. That way you can build all the complicated
 query logic first, then at the end declare it in the CURSOR cast much more simply from the last WITH clause.
 
 ```sql
