@@ -21,7 +21,7 @@ PL/SQL Program Unit</panel_attributes>
       <w>140</w>
       <h>60</h>
     </coordinates>
-    <panel_attributes>Generate CSV rows</panel_attributes>
+    <panel_attributes>Generate CSV Rows</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
@@ -44,8 +44,7 @@ of CSV Rows</panel_attributes>
       <w>160</w>
       <h>60</h>
     </coordinates>
-    <panel_attributes>Write File
-of CSV Rows</panel_attributes>
+    <panel_attributes>Create CSV File</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
@@ -57,7 +56,7 @@ of CSV Rows</panel_attributes>
       <h>60</h>
     </coordinates>
     <panel_attributes>Create Header
-CSV row</panel_attributes>
+CSV Row</panel_attributes>
     <additional_attributes/>
   </element>
   <element>

@@ -20,9 +20,9 @@ they are returned from the cursor.
 
 - [Installation](#installation)
 - [Use Cases](#use-cases)
-    - [Read From Table Function](#read-from-table-function)
-    - [Create a CSV FIle](#create-a-csv-file)
-    - [Retrieve a CLOB](#retrieve-a-clob)
+    - [Generate CSV Rows](#generate-csv-rows)
+    - [Create CSV FIle](#create-csv-file)
+    - [Generate CLOB of CSV Rows](#generate-clob-of-csv-rows)
     - [Process Results in a Loop](#process-results-in-a-loop)
 - [Test Directory](#test-directory)
 - [Manual Page](#manual-page)
@@ -73,7 +73,7 @@ Once you complete any changes to *install.sql*, run it with sqlplus:
 
  ![app_csv_udt Use Case Diagram](app_csv_use_case.gif)
 
-## Read from TABLE Function
+## Generate CSV Rows
 
 You can use a simple SQL SELECT to read CSV strings as records from the TABLE function *get_rows*, perhaps
 spooling them to a text file with sqlplus. Given how frequently I've seen a cobbled together
@@ -100,7 +100,7 @@ The following is *test1.sql* from the *test* directory.
     spool off
 ```
 
-## Create a CSV File
+## Create CSV File
 
 Produce a CSV file on the Oracle server in a directory to which you have write access. Presumably
 you have a process that can then access the file, perhaps sending it to a vendor. *test/test3.sql*
@@ -140,7 +140,7 @@ is a contrived example of writing the file, then using TO_CLOB(BFILENAME()) to r
     spool off
 ```
 
-## Retrieve a CLOB
+## Generate CLOB of CSV Rows
 
 The CSV strings can be concatenated into a CLOB with linefeed (or CR/LF) after each row. The resulting CLOB can be
 attached to an e-mail, written to a file or inserted/updated to a CLOB column in a table. Perhaps
