@@ -61,6 +61,9 @@ it will compile the appropriate type with your name.
 
 Same can be done for *d_arr_integer_udt*, *d_arr_clob_udt* and *d_arr_arr_clob_udt*.
 
+The User Defined Types *app_dbms_sql* and *app_dbms_sql_str* are required subcomponents from plsql_utilities. 
+If you want to rename them you will need to edit the code and install scripts.
+
 You could also edit *app_csv_udt.tps* and *app_csv_udt.tpb* to
 change the return type of *get_rows* to TABLE of CLOB if you have a need for rows longer than 4000 chars 
 in a TABLE function callable from SQL. If you are dealing exclusively in PL/SQL, the rows are already CLOB.
@@ -211,26 +214,26 @@ Creates the object using the provided cursor or SQL string. Prepares for reading
 
 ```sql
     CONSTRUCTOR FUNCTION app_csv_utd(
-        p_cursor                SYS_REFCURSOR
-        ,p_separator            VARCHAR2 := ','
-        ,p_quote_all_strings    VARCHAR2 := 'N'
-        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote
-        ,p_bulk_count           INTEGER := 100
-        ,p_num_format           VARCHAR2 := 'tm9'
-        ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
-        ,p_interval_format      VARCHAR2 := NULL
+        p_cursor                        SYS_REFCURSOR
+        ,p_separator                    VARCHAR2 := ','
+        ,p_quote_all_strings            VARCHAR2 := 'N'
+        ,p_strip_separator              VARCHAR2 := 'N' -- strip comma from fields rather than quote
+        ,p_bulk_count                   INTEGER := 100
+        ,p_num_format                   VARCHAR2 := 'tm9'
+        ,p_date_format                  VARCHAR2 := 'MM/DD/YYYY'
+        ,p_interval_format              VARCHAR2 := NULL
         ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
 --
     CONSTRUCTOR FUNCTION app_csv_utd(
-        p_sql                   CLOB
-        ,p_separator            VARCHAR2 := ','
-        ,p_quote_all_strings    VARCHAR2 := 'N'
-        ,p_strip_separator      VARCHAR2 := 'N' -- strip comma from fields rather than quote
-        ,p_bulk_count           INTEGER := 100
-        ,p_num_format           VARCHAR2 := 'tm9'
-        ,p_date_format          VARCHAR2 := 'MM/DD/YYYY'
-        ,p_interval_format      VARCHAR2 := NULL
+        p_sql                           CLOB
+        ,p_separator                    VARCHAR2 := ','
+        ,p_quote_all_strings            VARCHAR2 := 'N'
+        ,p_strip_separator              VARCHAR2 := 'N' -- strip comma from fields rather than quote
+        ,p_bulk_count                   INTEGER := 100
+        ,p_num_format                   VARCHAR2 := 'tm9'
+        ,p_date_format                  VARCHAR2 := 'MM/DD/YYYY'
+        ,p_interval_format              VARCHAR2 := NULL
         ,p_protect_numstr_from_excel    VARCHAR2 := 'N'
     ) RETURN SELF AS RESULT
 ```
