@@ -42,12 +42,12 @@ they are returned from the cursor.
 
 # Installation
 
-Clone this repository or download it as a [zip](https://github.com/lee-lindley/app_csv/archive/refs/heads/main.zip) archive.
+Clone this repository or download it as a [zip](https://github.com/lee-lindley/app_csv_udt/archive/refs/heads/main.zip) archive.
 
 Note: [plsql_utilties](https://github.com/lee-lindley/plsql_utilities) is provided as a submodule,
 so use the clone command with recursive-submodules option:
 
-`git clone --recursive-submodules https://github.com/lee-lindley/app_csv.git`
+`git clone --recursive-submodules https://github.com/lee-lindley/app_csv_udt.git`
 
 or download it separately as a zip 
 archive ([plsql_utilities.zip](https://github.com/lee-lindley/plsql_utilities/archive/refs/heads/main.zip)),
