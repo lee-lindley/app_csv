@@ -74,7 +74,9 @@ Once you complete any changes to *install.sql*, run it with sqlplus:
 
 # Use Cases
 
- ![app_csv_udt Use Case Diagram](images/app_csv_use_case.gif)
+| ![app_csv_udt Use Case Diagram](images/app_csv_use_case.gif) |
+|:--:|
+| app_csv_udt Use Case Diagram |
 
 ## Generate CSV Rows
 
