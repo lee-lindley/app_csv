@@ -56,8 +56,12 @@ and extract the content of root folder into *plsql_utilities* folder.
 Run *install.sql*
 
 If you already have a suitable TABLE type, you can update the sqlplus define variable *d_arr_varchar2_udt*
-and comment out the section that creates it in the install file. Same is true
-for *d_arr_integer_udt*, *d_arr_clob_udt* and *d_arr_arr_clob_udt*.
+and set the define *compile_arr_varchar2_udt* to FALSE in the install file. You can change the name
+of the type with *d_arr_varchar2_udt* and keep *compile_arr_varchar2_udt* as TRUE in which case
+it will compile the appropriate type with your name.
+
+Same can be done for *d_arr_integer_udt*, *d_arr_clob_udt* and *d_arr_arr_clob_udt*.
+
 You could also
 change the return type of *get_rows* to TABLE of CLOB if you have a need for rows longer than 4000 chars 
 in a TABLE function callable from SQL. If you are dealing exclusively in PL/SQL, the rows are already CLOB.
